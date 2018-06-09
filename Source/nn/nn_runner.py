@@ -3,8 +3,8 @@ from sklearn.externals import joblib
 from sklearn.feature_extraction.text import CountVectorizer
 import _pickle as pickle
 
-model_path = './../models/nn/'
-
+# model_path = './../models/nn/'
+model_path = './models/nn/'
 def load_models(feature):
     # saver = tf.train.import_meta_graph('./models/text_classifier/model.meta')
     with tf.Session() as sess:
@@ -22,7 +22,7 @@ def get_class(query):
     query = [query]
     # from sklearn.feature_extraction.text import CountVectorizer
     # count_vect = joblib.load('feature.pkl')
-    count_vect = CountVectorizer(decode_error="replace", vocabulary=pickle.load(open(model_path+"/feature.pkl", "rb")))
+    count_vect = CountVectorizer(decode_error="replace", vocabulary=pickle.load(open(model_path+"feature.pkl", "rb")))
     X_train_counts = count_vect.fit_transform(query)
     feature = X_train_counts.toarray()
     # print(feature)
@@ -30,5 +30,6 @@ def get_class(query):
 
 
 if __name__ == "__main__":
-    query = "Work Schedule Discover employees"
+    # query = "Work Schedule Discover employees"
+    query = " Benefits Enrollment Deductions in Default Benefits: Day One"
     get_class(query)

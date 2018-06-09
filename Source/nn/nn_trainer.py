@@ -18,11 +18,12 @@ n_hidden1 = 128     # neurons in first hidden layer
 n_hidden2 = 128    # neurons in second hidden layer
 
 # Training Param
-learning_rate = 0.01
+learning_rate = 0.001
 batch_size = 128    # Batch size defines number of samples that going to be propagated through the network.
-num_step = 200      # Epochs
+num_step = 500      # Epochs
 display_step = 100  #
 model_path = './../models/nn/'
+
 
 def feature_extractor(data):
     """ Convert text into numerical features"""
@@ -73,7 +74,7 @@ def neural_engine(train_x, train_y):
     Y = tf.placeholder("float", [None, num_classes])
     # Construct model
     logits = neural_net(X, n_input, num_classes)
-    prediction = tf.nn.sigmoid(logits, name="prediction")
+    prediction = tf.nn.sigmoid(logits, name="prediction") # It will return same number of output neurons as defined
 
     loss_op = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=logits, labels=Y))
 
@@ -112,16 +113,34 @@ def neural_engine(train_x, train_y):
         print("Model saved in file: %s" % tf_save_path)
 
     return res
+
+
+def dec_to_bin(x):
+    return int(bin(x)[2:])
+
+# def modify_intent_column(data):
+#     intent_list = data['Intent'].unique().tolist()
+#
+#
+#     print(dec_to_bin(total_intent_count))
+#     # Add coulmns
+#
+#     print(type(total_intent_count))
+#     print(total_intent_count)
+#     pass
+
+
 if __name__ == "__main__":
 
     # Pre-process Data and conver it into training data
-    shuffled_data = pd.read_csv('./../Data/text_classification_data.csv')
+    shuffled_data = pd.read_csv('./../Data/text_classification_data2.csv')
     # shuffled_data = shuffle(data) # Shuffling data set
-
+    # modify_intent_column(shuffled_data)
     text_data = shuffled_data['Que']    # Column name which has sentences
-    intent = shuffled_data['Intent']    # Column which has corresponding intent to a sentence
+    intent = shuffled_data.iloc[:,2:4]   # Column which has corresponding intent to a sentence
     train_features = feature_extractor(text_data)
     print("Feature extraction Done !")
+
     output_frame = neural_engine(train_features, intent)
     print("Training done !!!")
     # shuffled_data['Predicted Class'] = output_frame
