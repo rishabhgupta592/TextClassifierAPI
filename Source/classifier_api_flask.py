@@ -28,8 +28,8 @@ def intent_classify():
     # print(res[0][0])
     intent_name = "undefined"
     intent = res[0]
-    print(intent[0])
-    print(intent[1])
+    # print(intent[0])
+    # print(intent[1])
     if intent[0] == 0.0:
         intent_name = "Policy 1"
     elif intent[0] == 1.0:
