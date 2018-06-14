@@ -180,7 +180,7 @@ def main(unused_argv):
         num_epochs=1,
         shuffle=False)
     eval_results = mnist_classifier.evaluate(input_fn=eval_input_fn)
-    save_model(mnist_classifier, model_path)
+    # save_model(mnist_classifier, model_path)
     print(eval_results)
 
 
