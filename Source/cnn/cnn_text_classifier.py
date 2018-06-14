@@ -3,6 +3,8 @@ from sklearn.feature_extraction.text import CountVectorizer
 import _pickle as pickle
 import pandas as pd
 import numpy as np
+import os
+
 from sklearn.model_selection import train_test_split
 # CNN for text data
 tf.logging.set_verbosity(tf.logging.INFO)
@@ -16,6 +18,7 @@ def feature_extractor(data):
     # joblib.dump(count_vect.vocabulary_, 'feature.pkl')
     pickle.dump(count_vect.vocabulary_, open("cnn_feature.pkl","wb"))
     print("Feature vector size = ",np.shape(X_train_counts))
+    print("Feature extraction Done !")
     return X_train_counts.toarray()
 
 
@@ -91,7 +94,9 @@ def cnn_model_fn(features, labels, mode):
         "probabilities": tf.nn.softmax(logits, name="softmax_tensor")
     }
     if mode == tf.estimator.ModeKeys.PREDICT:
-        return tf.estimator.EstimatorSpec(mode=mode, predictions=predictions)
+        export_outputs = {'predict_output': tf.estimator.export.PredictOutput(predictions)}
+        predictions_dict = {"predicted": predictions}
+        return tf.estimator.EstimatorSpec(mode=mode, predictions=predictions,export_outputs=export_outputs)
 
     # Calculate Loss (for both TRAIN and EVAL modes)
     loss = tf.losses.sparse_softmax_cross_entropy(labels=labels, logits=logits)
@@ -111,16 +116,18 @@ def cnn_model_fn(features, labels, mode):
     return tf.estimator.EstimatorSpec(
         mode=mode, loss=loss, eval_metric_ops=eval_metric_ops)
 
+
 def main(unused_argv):
     # Pre-process Data and conver it into training data
-    shuffled_data = pd.read_csv('./data/text_classification_data.csv')
+    shuffled_data = pd.read_csv('./../Data/text_classification_data3.csv')
     # shuffled_data = shuffle(data) # Shuffling data set
 
     text_data = shuffled_data['Que']
-    intent = shuffled_data['Intent']
+    intent = shuffled_data['I1']
+    # intent = shuffled_data.iloc[:, 2:4]
     # intent = shuffled_data.iloc[:,1:]
     train_features = feature_extractor(text_data)
-    print("Feature extraction Done !")
+
 
     X_train, X_test, y_train, y_test = train_test_split(train_features, intent, test_size = 0.33)
 
@@ -128,16 +135,19 @@ def main(unused_argv):
     # sys.exit(0)
     # zero_numpy = np.zeros(30*30)
     # zero_numpy[:]
-    train_features = np.pad(X_train, ((0,0), (0,39)), 'constant')
+    train_features = np.pad(X_train, ((0,0), (0,73)), 'constant')
     train_features = train_features.astype('float16')
 
-    X_test = np.pad(X_test, ((0,0), (0,39)), 'constant')
+    X_test = np.pad(X_test, ((0,0), (0,73)), 'constant')
     X_test = X_test.astype('float16')
     # y_train = y_train.astype('float16')
     print("check1")
     # Create the Estimator
+    model_path = './../models/cnn/'
+    if not os.path.exists(model_path):
+        os.makedirs(model_path)
     mnist_classifier = tf.estimator.Estimator(
-        model_fn=cnn_model_fn, model_dir="./tmp6/mnist_convnet_model")
+        model_fn=cnn_model_fn, model_dir=model_path+"mnist_convnet_model")
     print("check2")
     # Set up logging for predictions
     # Log the values in the "Softmax" tensor with label "probabilities"
@@ -157,7 +167,7 @@ def main(unused_argv):
         shuffle=True)
     mnist_classifier.train(
         input_fn=train_input_fn,
-        steps=50,
+        steps=1,
         hooks=[logging_hook])
     print("check4")
     eval_data = X_test
@@ -170,7 +180,36 @@ def main(unused_argv):
         num_epochs=1,
         shuffle=False)
     eval_results = mnist_classifier.evaluate(input_fn=eval_input_fn)
+    save_model(mnist_classifier, model_path)
     print(eval_results)
+
+
+# saving models for later/runtime use.
+# https://www.tensorflow.org/programmers_guide/saved_model
+# Using SavedModel with Estimators
+
+def save_model(classifier, model_path ):
+    print("Saving models ...")
+    classifier.export_savedmodel(model_path,serving_input_receiver_fn=serving_input_receiver_fn)
+    pass
+
+
+""" During training, an input_fn() ingests data and prepares it for use by the model. At serving time, similarly, a serving_input_receiver_fn() accepts
+ inference requests and prepares them for the model.
+ 
+ This function has the following purposes:
+
+ $ To add placeholders to the graph that the serving system will feed with inference requests.
+ $ To add any additional ops needed to convert data from the input format into the feature Tensors expected by the model.
+"""
+
+def serving_input_receiver_fn():
+    serialized_tf_example = tf.placeholder(dtype=tf.string, shape=[None], name='input_tensors')
+    receiver_tensors = {"predictor_inputs": serialized_tf_example}
+    feature_spec = {"x": tf.FixedLenFeature([827], tf.float32)}
+    # feature_spec = tf.feature_column.make_parse_example_spec(feature_columns)
+    features = tf.parse_example(serialized_tf_example, feature_spec)
+    return tf.estimator.export.ServingInputReceiver(features, receiver_tensors)
 
 if __name__ == "__main__":
     # main('unused_argv')
