@@ -28,7 +28,7 @@ model_path = './../models/cnn/mnist_convnet_model/'
 #         output_dict = predictor({"predictor_inputs": [model_input]})
 #         y_predicted = output_dict["pred_output_classes"][0]
 #         return y_predicted
-
+import numpy as np
 
 def load_models(feature):
     # saver = tf.train.import_meta_graph('./models/text_classifier/model.meta')
@@ -37,10 +37,17 @@ def load_models(feature):
         new_saver.restore(sess, tf.train.latest_checkpoint(model_path))
         graph = tf.get_default_graph()
         # X = tf.placeholder("float", [None, 861], name='X')
-        X = graph.get_tensor_by_name("x:0")
-        prediction = graph.get_tensor_by_name("softmax_tensor:0")
-        print(sess.run(prediction, feed_dict={X:feature}))
-        return sess.run(prediction, feed_dict={X:feature})
+        train_features = np.pad(feature, ((0, 0), (0, 73)), 'constant')
+        train_features = train_features.astype('float16')
+        # batch_size = 100 set at the time of training
+        train_features = tf.reshape(train_features, [1, 30, 30, 1])
+        X = graph.get_tensor_by_name("input_x:0")
+        prediction_prob = graph.get_tensor_by_name("softmax_tensor:0")
+        # prediction_class = graph.get_tensor_by_name("output_class:0")
+        #
+        print(sess.run(prediction_prob, feed_dict={X:train_features}))
+        # print(sess.run(prediction_class, feed_dict={X: train_features}))
+        # return sess.run(prediction_class, feed_dict={X: train_features})
 
 
 def get_class(query):
