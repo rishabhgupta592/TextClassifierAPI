@@ -28,7 +28,10 @@ def cnn_model_fn(features, labels, mode):
     # Input Layer
     # Reshape X to 4-D tensor: [batch_size, width, height, channels]
     # MNIST images are 28x28 pixels, and have one color channel
-    input_layer = tf.reshape(features["x"], [-1, 30, 30, 1])
+
+    # -1 for batch size, which specifies that this dimension should be dynamically
+    # computed based on the number of input values in
+    input_layer = tf.reshape(features["x"], [-1, 30, 30, 1], name="input_x")
 
     # Convolutional Layer #1
     # Computes 32 features using a 5x5 filter with ReLU activation.
@@ -88,7 +91,7 @@ def cnn_model_fn(features, labels, mode):
 
     predictions = {
         # Generate predictions (for PREDICT and EVAL mode)
-        "classes": tf.argmax(input=logits, axis=1),
+        "classes": tf.argmax(input=logits, axis=1,name="output_class"),
         # Add `softmax_tensor` to the graph. It is used for PREDICT and by the
         # `logging_hook`.
         "probabilities": tf.nn.softmax(logits, name="softmax_tensor")
