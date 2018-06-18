@@ -68,7 +68,7 @@ def neural_engine(train_x, train_y):
     train_x = pd.DataFrame(train_x)
     train_y = pd.DataFrame(train_y)
     train_x, test_x, train_y, test_y = train_test_split(train_x, train_y)
-    n_input = len(train_x.columns)
+    n_input = len(train_x.columns) # Number of features
     num_classes = len(train_y.columns)
     X = tf.placeholder("float", [None, n_input],name='X')
     Y = tf.placeholder("float", [None, num_classes])

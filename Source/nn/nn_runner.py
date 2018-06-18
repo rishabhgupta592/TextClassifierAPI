@@ -4,7 +4,7 @@ from sklearn.feature_extraction.text import CountVectorizer
 import _pickle as pickle
 
 # model_path = './../models/nn/'
-model_path = './models/nn/'
+model_path = './../models/nn/'
 def load_models(feature):
     # saver = tf.train.import_meta_graph('./models/text_classifier/model.meta')
     with tf.Session() as sess:
