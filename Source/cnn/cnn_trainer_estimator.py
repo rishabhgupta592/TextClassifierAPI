@@ -6,7 +6,6 @@ import numpy as np
 import os
 
 from sklearn.model_selection import train_test_split
-
 # CNN for text data
 tf.logging.set_verbosity(tf.logging.INFO)
 
@@ -17,8 +16,8 @@ def feature_extractor(data):
     count_vect = CountVectorizer()
     X_train_counts = count_vect.fit_transform(data)
     # joblib.dump(count_vect.vocabulary_, 'feature.pkl')
-    pickle.dump(count_vect.vocabulary_, open("./../cnn/feature.pkl", "wb"))
-    print("Feature vector size = ", np.shape(X_train_counts))
+    pickle.dump(count_vect.vocabulary_, open("cnn_feature.pkl","wb"))
+    print("Feature vector size = ",np.shape(X_train_counts))
     print("Feature extraction Done !")
     return X_train_counts.toarray()
 
@@ -32,9 +31,9 @@ def cnn_model_fn(features, labels, mode):
 
     # -1 for batch size, which specifies that this dimension should be dynamically
     # computed based on the number of input values in
-    input_layer = tf.reshape(features["x"], [-1, 30, 30], name="input_x")
-
-
+    # input_layer = tf.reshape(features["x"], [-1, 30, 30, 1], name="input_x")
+    x = tf.placeholder(tf.float32, shape=[None, 30 * 30], name='X')
+    input_layer = tf.reshape(x, [-1, 30, 30, 1], name="input_x")
     # Convolutional Layer #1
     # Computes 32 features using a 5x5 filter with ReLU activation.
     # Padding is added to preserve width and height.
@@ -93,7 +92,7 @@ def cnn_model_fn(features, labels, mode):
 
     predictions = {
         # Generate predictions (for PREDICT and EVAL mode)
-        "classes": tf.argmax(input=logits, axis=1, name="output_class"),
+        "classes": tf.argmax(input=logits, axis=1,name="output_class"),
         # Add `softmax_tensor` to the graph. It is used for PREDICT and by the
         # `logging_hook`.
         "probabilities": tf.nn.softmax(logits, name="softmax_tensor")
@@ -101,7 +100,7 @@ def cnn_model_fn(features, labels, mode):
     if mode == tf.estimator.ModeKeys.PREDICT:
         export_outputs = {'predict_output': tf.estimator.export.PredictOutput(predictions)}
         predictions_dict = {"predicted": predictions}
-        return tf.estimator.EstimatorSpec(mode=mode, predictions=predictions, export_outputs=export_outputs)
+        return tf.estimator.EstimatorSpec(mode=mode, predictions=predictions,export_outputs=export_outputs)
 
     # Calculate Loss (for both TRAIN and EVAL modes)
     loss = tf.losses.sparse_softmax_cross_entropy(labels=labels, logits=logits)
@@ -130,20 +129,20 @@ def main(unused_argv):
     text_data = shuffled_data['Que']
     intent = shuffled_data['I1']
     # intent = shuffled_data.iloc[:, 2:4]
-    # intent = shuffled_data.iloc[:, 2:4]
     # intent = shuffled_data.iloc[:,1:]
     train_features = feature_extractor(text_data)
 
-    X_train, X_test, y_train, y_test = train_test_split(train_features, intent, test_size=0.33)
+
+    X_train, X_test, y_train, y_test = train_test_split(train_features, intent, test_size = 0.33)
 
     # import sys
     # sys.exit(0)
     # zero_numpy = np.zeros(30*30)
     # zero_numpy[:]
-    train_features = np.pad(X_train, ((0, 0), (0, 73)), 'constant')
+    train_features = np.pad(X_train, ((0,0), (0,73)), 'constant')
     train_features = train_features.astype('float16')
 
-    X_test = np.pad(X_test, ((0, 0), (0, 73)), 'constant')
+    X_test = np.pad(X_test, ((0,0), (0,73)), 'constant')
     X_test = X_test.astype('float16')
     # y_train = y_train.astype('float16')
     print("check1")
@@ -151,83 +150,70 @@ def main(unused_argv):
     model_path = './../models/cnn/'
     if not os.path.exists(model_path):
         os.makedirs(model_path)
+    mnist_classifier = tf.estimator.Estimator(
+        model_fn=cnn_model_fn, model_dir=model_path+"mnist_convnet_model")
     print("check2")
+    # Set up logging for predictions
+    # Log the values in the "Softmax" tensor with label "probabilities"
+    tensors_to_log = {"probabilities": "softmax_tensor"}
+    logging_hook = tf.train.LoggingTensorHook(
+        tensors=tensors_to_log, every_n_iter=1)
     print("check3")
     # Train the model
     train_data = train_features
     # print(type(train_data))
     train_labels = y_train.as_matrix()
+    train_input_fn = tf.estimator.inputs.numpy_input_fn(
+        x={"x": train_data},
+        y=train_labels,
+        batch_size=100,
+        num_epochs=None,
+        shuffle=True)
+    mnist_classifier.train(
+        input_fn=train_input_fn,
+        steps=1,
+        hooks=[logging_hook])
+    print("check4")
+    eval_data = X_test
+    y_test = y_test.as_matrix()
+    eval_labels = y_test
+    # Evaluate the model and print results
+    eval_input_fn = tf.estimator.inputs.numpy_input_fn(
+        x={"x": eval_data},
+        y=eval_labels,
+        num_epochs=1,
+        shuffle=False)
+    eval_results = mnist_classifier.evaluate(input_fn=eval_input_fn)
+    # save_model(mnist_classifier, model_path)
+    print(eval_results)
 
-    labels = train_labels
-    # From here start convolution
 
-    X = tf.placeholder(tf.float32, shape=[None, 30 * 30], name='input_X')
-    y_true = tf.placeholder(tf.float32, shape=[None, 2], name='y_true')
-    y_true_cls = tf.argmax(y_true, dimension=1)
-    input_layer = tf.reshape(X, [-1, 30, 30, 1])
-    conv1 = tf.layers.conv2d(
-        inputs=input_layer,
-        filters=32,
-        kernel_size=[5, 5],
-        padding="same",
-        activation=tf.nn.relu)
-    pool1 = tf.layers.max_pooling2d(inputs=conv1, pool_size=[2, 2], strides=2)
-    conv2 = tf.layers.conv2d(
-        inputs=pool1,
-        filters=64,
-        kernel_size=[5, 5],
-        padding="same",
-        activation=tf.nn.relu)
+# saving models for later/runtime use.
+# https://www.tensorflow.org/programmers_guide/saved_model
+# Using SavedModel with Estimators
 
-    pool2 = tf.layers.max_pooling2d(inputs=conv2, pool_size=[2, 2], strides=2)
-    pool2_flat = tf.reshape(pool2, [-1, 7 * 7 * 64])
-    dense = tf.layers.dense(inputs=pool2_flat, units=1024, activation=tf.nn.relu)
+def save_model(classifier, model_path ):
+    print("Saving models ...")
+    classifier.export_savedmodel(model_path,serving_input_receiver_fn=serving_input_receiver_fn)
+    pass
 
-    # Add dropout operation; 0.6 probability that element will be kept
-    # dropout = tf.layers.dropout(
-    #     inputs=dense, rate=0.4, training=mode == tf.estimator.ModeKeys.TRAIN)
-    """ Skipping dropout for now """
-    logits = tf.layers.dense(inputs=dense, units=10)
 
-    # with tf.variable_scope("Softmax"):
-    y_pred = tf.nn.softmax(logits, name="pred_prob")
-    y_pred_cls = tf.argmax(y_pred, dimension=1, name="prediction")
+""" During training, an input_fn() ingests data and prepares it for use by the model. At serving time, similarly, a serving_input_receiver_fn() accepts
+ inference requests and prepares them for the model.
+ 
+ This function has the following purposes:
 
-    loss_op = tf.losses.sparse_softmax_cross_entropy(labels=labels, logits=logits)
-    with tf.name_scope("accuracy"):
-        correct_prediction = tf.equal(y_pred_cls, y_true_cls)
-        accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-    with tf.name_scope("optimizer"):
-        optimizer = tf.train.AdamOptimizer(learning_rate=1e-4).minimize(loss_op)
-    init = tf.global_variables_initializer()
-    saver = tf.train.Saver()
-    num_step = 2
-    display_step = 1
-    with tf.Session() as sess:
-        sess.run(init)
+ $ To add placeholders to the graph that the serving system will feed with inference requests.
+ $ To add any additional ops needed to convert data from the input format into the feature Tensors expected by the model.
+"""
 
-        for step in range(1, num_step + 1):
-            # Feeding all sample in once
-            # TODO batch size introduction.
-            # batch_x, batch_y = mnist.train.next_batch(batch_size)
-            sess.run(optimizer, feed_dict={X: train_data, y_true_cls: y_train})
-            if step % display_step == 0 or step == 1:
-                # print(sess.run(prediction, feed_dict={X: train_x, Y: train_y}))
-                loss, acc = sess.run([loss_op, accuracy], feed_dict={X: train_data, y_true_cls: y_train})
-                print("Step " + str(step) + ", Minibatch Loss= " + \
-                      "{:.4f}".format(loss) + ", Training Accuracy= " + \
-                      "{:.3f}".format(acc))
-
-        print("Optimization Finished!")
-        print("Test Accuracy", sess.run(accuracy, feed_dict={X: X_test , y_true_cls: y_test}))
-        res = sess.run(y_pred_cls, feed_dict={X: train_data})
-        print(res)
-        if not os.path.exists(model_path):
-            os.makedirs(model_path)
-        save_path = model_path + '/model.ckpt'
-        tf_save_path = saver.save(sess, save_path)
-        print("Model saved in file: %s" % tf_save_path)
-
+def serving_input_receiver_fn():
+    serialized_tf_example = tf.placeholder(dtype=tf.string, shape=[None], name='input_tensors')
+    receiver_tensors = {"predictor_inputs": serialized_tf_example}
+    feature_spec = {"x": tf.FixedLenFeature([827], tf.float32)}
+    # feature_spec = tf.feature_column.make_parse_example_spec(feature_columns)
+    features = tf.parse_example(serialized_tf_example, feature_spec)
+    return tf.estimator.export.ServingInputReceiver(features, receiver_tensors)
 
 if __name__ == "__main__":
     # main('unused_argv')
