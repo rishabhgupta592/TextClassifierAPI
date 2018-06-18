@@ -6,6 +6,8 @@ import _pickle as pickle
 # model_path = './../models/nn/'
 model_path = './../models/cnn/'
 import numpy as np
+
+
 def load_models(feature):
     # saver = tf.train.import_meta_graph('./models/text_classifier/model.meta')
     with tf.Session() as sess:
@@ -35,6 +37,6 @@ def get_class(query):
 
 
 if __name__ == "__main__":
-    query = "Work Schedule Discover employees"
-    # query = " Benefits Enrollment Deductions in Default Benefits: Day One"
-    get_class(query)
+    # query = "Work Schedule Discover employees"
+    query = " Benefits Enrollment Deductions in Default Benefits: Day One"
+    print(get_class(query))
