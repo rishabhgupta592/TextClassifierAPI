@@ -88,9 +88,12 @@ def main(unused_argv):
     dense = tf.layers.dense(inputs=pool2_flat, units=1024, activation=tf.nn.relu)
 
     # Add dropout operation; 0.6 probability that element will be kept
+    # Todo add dropout
     # dropout = tf.layers.dropout(
     #     inputs=dense, rate=0.4, training=mode == tf.estimator.ModeKeys.TRAIN)
     """ Skipping dropout for now """
+
+    # Todo unit should be equal to number of classes
     logits = tf.layers.dense(inputs=dense, units=10)
 
     # with tf.variable_scope("Softmax"):
