@@ -136,6 +136,18 @@ def main(unused_argv):
         save_path = model_path + '/model.ckpt'
         tf_save_path = saver.save(sess, save_path)
         print("Model saved in file: %s" % tf_save_path)
+        class_res = sess.run(y_pred_cls, feed_dict={X: X_test, y_true_cls: y_test})
+        # print(class_res)
+        # print(tf.shape(class_res))
+        get_precision(y_test, class_res)
+
+
+def get_precision(y_true, y_pred):
+    from sklearn.metrics import precision_recall_fscore_support
+    print(precision_recall_fscore_support(y_true, y_pred, average='macro'))
+    score_list = precision_recall_fscore_support(y_true, y_pred, average='macro')
+    print("Precision = ", score_list[0])
+    print("Recall = ", score_list[1])
 
 
 if __name__ == "__main__":
