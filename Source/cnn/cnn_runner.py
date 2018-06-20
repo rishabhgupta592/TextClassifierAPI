@@ -21,7 +21,7 @@ def load_models(feature):
         prediction = graph.get_tensor_by_name("prediction:0")
         prediction_prob = graph.get_tensor_by_name("pred_prob:0")
         print(sess.run(prediction_prob, feed_dict={X:train_features}))
-        print("Class: %s",sess.run(prediction, feed_dict={X: train_features}))
+        print("Class: ",sess.run(prediction, feed_dict={X: train_features}))
         # return sess.run(prediction, feed_dict={X:feature})
 
 
